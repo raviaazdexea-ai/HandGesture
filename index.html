@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electric Venom Starfield</title>
+    <title>Electric Pulse Oval</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; cursor: none; }
         canvas { display: block; }
     </style>
 </head>
@@ -19,13 +19,14 @@
         let width, height;
         let mouse = { x: 0, y: 0 };
         const stars = [];
-        const numStars = 600; 
+        const numStars = 800; 
 
-        const segments = [];
-        const numSegments = 25; // Lebih pendek agar terasa seperti aliran listrik cepat
+        // Posisi bola energi
+        let ballPos = { x: 0, y: 0 };
         
         function init() {
             resize();
+            ballPos = { x: width / 2, y: height / 2 };
             for (let i = 0; i < numStars; i++) {
                 stars.push({
                     x: Math.random() * width,
@@ -33,9 +34,6 @@
                     size: Math.random() * 2,
                     brightness: Math.random()
                 });
-            }
-            for (let i = 0; i < numSegments; i++) {
-                segments.push({ x: width / 2, y: height / 2 });
             }
         }
 
@@ -50,26 +48,14 @@
             mouse.y = e.clientY;
         });
 
-        function update() {
-            segments[0].x += (mouse.x - segments[0].x) * 0.25;
-            segments[0].y += (mouse.y - segments[0].y) * 0.25;
-
-            for (let i = 1; i < numSegments; i++) {
-                const seg = segments[i];
-                const prev = segments[i - 1];
-                // Efek Jitter (Getaran Listrik)
-                const jitterX = (Math.random() - 0.5) * 15;
-                const jitterY = (Math.random() - 0.5) * 15;
-                
-                seg.x += (prev.x - seg.x) * 0.5 + jitterX;
-                seg.y += (prev.y - seg.y) * 0.5 + jitterY;
-            }
-        }
-
         function draw() {
-            // Background dengan sedikit trail (efek bayangan)
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            // Background hitam pekat
+            ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, width, height);
+
+            // Pergerakan smooth mengikuti mouse
+            ballPos.x += (mouse.x - ballPos.x) * 0.15;
+            ballPos.y += (mouse.y - ballPos.y) * 0.15;
 
             // Gambar Bintang
             stars.forEach(star => {
@@ -77,51 +63,66 @@
                 ctx.beginPath();
                 ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Sambaran Listrik ke Bintang terdekat
+                const dx = ballPos.x - star.x;
+                const dy = ballPos.y - star.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < 120) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(0, 255, 255, ${1 - dist/120})`;
+                    ctx.lineWidth = Math.random() * 2;
+                    ctx.moveTo(ballPos.x + (Math.random()-0.5)*20, ballPos.y + (Math.random()-0.5)*20);
+                    // Garis zigzag ke bintang
+                    let midX = (ballPos.x + star.x) / 2 + (Math.random() - 0.5) * 30;
+                    let midY = (ballPos.y + star.y) / 2 + (Math.random() - 0.5) * 30;
+                    ctx.lineTo(midX, midY);
+                    ctx.lineTo(star.x, star.y);
+                    ctx.stroke();
+                }
             });
 
-            // Efek Loncatan Listrik ke Bintang (Banyakin & Terangin)
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00ffff';
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)';
-            ctx.lineWidth = 1.5;
+            // MENGGAMBAR OVAL LISTRIK
+            const jitterX = (Math.random() - 0.5) * 10;
+            const jitterY = (Math.random() - 0.5) * 10;
 
-            segments.forEach((seg) => {
-                stars.forEach(star => {
-                    const dx = seg.x - star.x;
-                    const dy = seg.y - star.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (dist < 70) { // Jangkauan sambaran listrik
-                        ctx.beginPath();
-                        ctx.moveTo(seg.x, seg.y);
-                        // Garis zigzag patah-patah khas listrik
-                        ctx.lineTo(star.x + (Math.random()-0.5)*10, star.y + (Math.random()-0.5)*10);
-                        ctx.stroke();
-                    }
-                });
-            });
-
-            // Gambar Inti Listrik Utama
-            ctx.beginPath();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = '#fff'; // Inti putih agar silau
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = '#00ffff';
+            ctx.save();
+            ctx.translate(ballPos.x + jitterX, ballPos.y + jitterY);
             
-            ctx.moveTo(segments[0].x, segments[0].y);
-            for (let i = 1; i < numSegments; i++) {
-                ctx.lineTo(segments[i].x, segments[i].y);
-            }
-            ctx.stroke();
+            // Rotasi oval dikit biar dinamis
+            ctx.rotate(Math.atan2(mouse.y - ballPos.y, mouse.x - ballPos.x));
 
-            // Tambahan lapisan biru luar
-            ctx.lineWidth = 8;
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-            ctx.stroke();
+            // Layer Glow Luar (Cyan)
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = '#00ffff';
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 45, 25, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Layer Inti (Putih Terang)
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#fff';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 35, 18, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Percikan Listrik Internal (Jittery lines di dalam oval)
+            for(let i=0; i<5; i++) {
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo((Math.random()-0.5)*40, (Math.random()-0.5)*20);
+                ctx.lineTo((Math.random()-0.5)*40, (Math.random()-0.5)*20);
+                ctx.stroke();
+            }
+
+            ctx.restore();
         }
 
         function loop() {
-            update();
             draw();
             requestAnimationFrame(loop);
         }
