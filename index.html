@@ -1,1 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venom Space Slime</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
 
+    <div id="ui">Gerakkan mouse untuk mengendalikan Venom</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let mouse = { x: 0, y: 0 };
+        const stars = [];
+        const numStars = 800; // Jumlah bintang yang banyak
+
+        // Konfigurasi Venom
+        const segments = [];
+        const numSegments = 40;
+        const segmentDist = 8;
+        
+        function init() {
+            resize();
+            // Buat Bintang
+            for (let i = 0; i < numStars; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 1.5,
+                    opacity: Math.random()
+                });
+            }
+            // Buat Segmen Venom
+            for (let i = 0; i < numSegments; i++) {
+                segments.push({ x: width / 2, y: height / 2 });
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        function update() {
+            // Pergerakan kepala mengikuti mouse
+            segments[0].x += (mouse.x - segments[0].x) * 0.3;
+            segments[0].y += (mouse.y - segments[0].y) * 0.3;
+
+            // Pergerakan badan (efek mengekor)
+            for (let i = 1; i < numSegments; i++) {
+                const seg = segments[i];
+                const prev = segments[i - 1];
+                const dx = prev.x - seg.x;
+                const dy = prev.y - seg.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+
+                if (distance > segmentDist) {
+                    seg.x = prev.x - Math.cos(angle) * segmentDist;
+                    seg.y = prev.y - Math.sin(angle) * segmentDist;
+                }
+            }
+        }
+
+        function draw() {
+            // Background Hitam
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+
+            // Gambar Bintang
+            ctx.fillStyle = 'white';
+            stars.forEach(star => {
+                ctx.globalAlpha = star.opacity;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Efek Slime/Venom Merambat ke Bintang
+            ctx.strokeStyle = '#222'; // Warna slime gelap
+            ctx.lineWidth = 0.5;
+            segments.forEach((seg, i) => {
+                if (i % 5 === 0) { // Cek tiap beberapa segmen agar tidak lag
+                    stars.forEach(star => {
+                        const dx = seg.x - star.x;
+                        const dy = seg.y - star.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 50) {
+                            ctx.beginPath();
+                            ctx.moveTo(seg.x, seg.y);
+                            ctx.lineTo(star.x, star.y);
+                            ctx.stroke();
+                        }
+                    });
+                }
+            });
+
+            // Gambar Badan Venom
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Layer Luar (Glow/Lendir)
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#000';
+            ctx.strokeStyle = '#111';
+            for (let i = numSegments - 1; i > 0; i--) {
+                ctx.lineWidth = (numSegments - i) * 1.2;
+                ctx.beginPath();
+                ctx.moveTo(segments[i].x, segments[i].y);
+                ctx.lineTo(segments[i - 1].x, segments[i - 1].y);
+                ctx.stroke();
+            }
+
+            // Layer Dalam (Inti Hitam Pekat)
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = '#050505';
+            for (let i = numSegments - 1; i > 0; i--) {
+                ctx.lineWidth = (numSegments - i) * 0.8;
+                ctx.beginPath();
+                ctx.moveTo(segments[i].x, segments[i].y);
+                ctx.lineTo(segments[i - 1].x, segments[i - 1].y);
+                ctx.stroke();
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        init();
+        loop();
+    </script>
+</body>
+</html>
